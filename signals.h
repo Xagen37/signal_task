@@ -32,6 +32,7 @@ namespace signals
 
 		private:
 			void replace(connection& other);
+			void nullify();
 
 			signal* sig = nullptr;
 			slot_t slot = nullptr;
@@ -108,7 +109,7 @@ namespace signals
 	template <typename... Args>
 	signal<void(Args...)>::connection::~connection()
 	{
-		if (sig) { disconnect(); }
+		disconnect(); 
 	}
 
 	template<typename... Args>
@@ -133,8 +134,15 @@ namespace signals
 			}
 		}
 
+		nullify();
+	}
+
+	template <typename... Args>
+	void signal<void(Args...)>::connection::nullify()
+	{
 		unlink();
 		sig = nullptr;
+		slot = nullptr;
 	}
 
 
@@ -188,16 +196,16 @@ namespace signals
 	template <typename... Args>
 	signal<void(Args...)>::~signal() 
 	{
+		for (iteration_token* tok = top_token; tok != nullptr; tok = tok->next)
+		{
+			tok->sig = nullptr;
+		}
+
 		for (auto connection_it = connections.begin(); connection_it != connections.end(); )
 		{
 			auto copy_it = connection_it;
 			connection_it++;
-			copy_it->disconnect();
-		}
-
-		for (iteration_token* tok = top_token; tok != nullptr; tok = tok->next)
-		{
-			tok->sig = nullptr;
+			copy_it->nullify();
 		}
 	}
 }
